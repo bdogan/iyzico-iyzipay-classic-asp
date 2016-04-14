@@ -1,6 +1,5 @@
 <!--#include file="iyzipay/installment_info.asp" -->
 <!--#include file="lib/aspJSON1.17.asp" -->
-<!--#include file="lib/base64encoder.asp" -->
 <%
 
 Class oIyzico
@@ -29,22 +28,10 @@ Class oIyzico
 		IsDictionary = (TypeName(pDict) = "Dictionary")
 	End Property
 	
-	Public Property Get IsAspList(ByVal pDict)
-		IsAspList = (TypeName(pDict) = "AspList")
-	End Property
-			
 	Public Property Get IsAspJson(ByVal pJson)
 		IsAspJson = (TypeName(pJson) = "aspJSON")
 	End Property
-	
-	Public Property Get IsRequestCollection(ByVal pReq)
-		IsRequestCollection = (TypeName(pReq) = "IRequestDictionary")
-	End Property
 
-	Public Property Get IsApplicationObj(ByVal pReq)
-		IsApplicationObj = (TypeName(pReq) = "IApplicationObject")
-	End Property
-	
 	Public Property Get IsBoolean(ByVal pReq)
 		IsBoolean = (TypeName(pReq) = "Boolean")
 	End Property
@@ -59,41 +46,13 @@ Class oIyzico
 				Cursor = Cursor + 1
 			Next
 			DebugStr = "Array (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
-		ElseIf (IsDictionary(pObj) OR IsAspList(pObj)) Then
+		ElseIf (IsDictionary(pObj)) Then
 			Cursor = 0 : ReDim resultArr(pObj.Count)
 			For Each dKey In pObj.Keys
 				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & dKey & "] => " & Replace(DebugStr(pObj(dKey)), VBCRLF, VBCRLF & VBTAB)
 				Cursor = Cursor + 1
 			Next
 			DebugStr = TypeName(pObj) & " (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
-		ElseIf (IsAspJson(pObj)) Then
-			Cursor = 0 : ReDim resultArr(pObj.data.Count)
-			For Each dKey In pObj.data.Keys
-				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & dKey & "] => " & Replace(DebugStr(pObj.data(dKey)), VBCRLF, VBCRLF & VBTAB)
-				Cursor = Cursor + 1
-			Next
-			DebugStr = "aspJSON (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
-		ElseIf (IsRequestCollection(pObj)) Then
-			Cursor = 0 : ReDim resultArr(pObj.Count)
-			For Each dKey In pObj
-				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & dKey & "] => " & Replace(DebugStr(pObj(dKey)), VBCRLF, VBCRLF & VBTAB)
-				Cursor = Cursor + 1
-			Next
-			DebugStr = "IRequestDictionary (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
-		ElseIf (IsType(pObj, "Files")) Then
-			Cursor = 0 : ReDim resultArr(pObj.Count)
-			For Each dKey In pObj
-				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & Cursor & "] => " & Replace(DebugStr(dKey), VBCRLF, VBCRLF & VBTAB)
-				Cursor = Cursor + 1
-			Next
-			DebugStr = "Files (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
-		ElseIf (IsApplicationObj(pObj)) Then
-			Cursor = 0 : ReDim resultArr(pObj.Contents.Count)
-			For Each dKey In pObj.Contents
-				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & dKey & "] => " & Replace(DebugStr(pObj(dKey)), VBCRLF, VBCRLF & VBTAB)
-				Cursor = Cursor + 1
-			Next
-			DebugStr = "IRequestDictionary (" & VBCRLF & Join(resultArr, VBCRLF) & ")"
 		ElseIf (IsObject(pObj)) Then
 			On Error Resume Next
 			DebugStr = Cstr(pObj)
@@ -138,6 +97,15 @@ Class oIyzico
 		CreateOptions.BaseUrl = pBaseUrl
 	End Property
 	
+	Public Property Get GenerateHashFromData(pData)
+		Dim pKey, pHashValues(), Cursor : Cursor = 0 : ReDim pHashValues(pData.Count - 1)
+		For Each pKey In pData.Keys
+			pHashValues(Cursor) = pKey & "=" & pData.Item(pKey)
+			Cursor = Cursor + 1
+		Next
+		GenerateHashFromData = Join(pHashValues, ",")
+	End Property
+	
 	Private Property Get RequestHeaders(pRequest)
 		Set RequestHeaders = Server.CreateObject("Scripting.Dictionary")
 		RequestHeaders.Add "Accept", "application/json"
@@ -150,48 +118,56 @@ Class oIyzico
 	End Property
 	
 	Private Property Get AuthString(pRequest, pRand)
-		AuthString = "IYZWS " & pOptions.ApiKey & ":" & b64_sha1(pOptions.ApiKey & pRand & pOptions.SecretKey & GenerateRequestHash(pRequest))
+		AuthString = "IYZWS " & pOptions.ApiKey & ":" & base64_sha1(pOptions.ApiKey & pRand & pOptions.SecretKey & GenerateRequestHash(pRequest))
 	End Property
 	
-	Private Function b64_sha1(pVal)
-		Set oEncoding = CreateObject("System.Text.UTF8Encoding")
+	Private Function base64_sha1(pVal)
+		pr(pVal)
 		Set oCrypt = Server.CreateObject("System.Security.Cryptography.SHA1Managed")
-		Dim aBytes : aBytes = oEncoding.GetBytes_4(pVal)
-		Dim aBinResult : aBinResult = oCrypt.ComputeHash_2((aBytes))
-		b64_sha1 = base64_encode(BinaryToString(aBinResult)) & "="
-		Set oEncoding = Nothing
+		base64_sha1 = Base64Encode(oCrypt.ComputeHash_2(ToBytes(pVal, "ascii")), "ascii")
 		Set oCrypt = Nothing
 	End Function
 	
-	Private Property Get BinaryToString(Binary)
-	  'Antonin Foller, http://www.motobit.com
-	  'Optimized version of a simple BinaryToString algorithm.
-	  
-	  Dim cl1, cl2, cl3, pl1, pl2, pl3
-	  Dim L
-	  cl1 = 1
-	  cl2 = 1
-	  cl3 = 1
-	  L = LenB(Binary)
-	  
-	  Do While cl1<=L
-		pl3 = pl3 & Chr(AscB(MidB(Binary,cl1,1)))
-		cl1 = cl1 + 1
-		cl3 = cl3 + 1
-		If cl3>300 Then
-		  pl2 = pl2 & pl3
-		  pl3 = ""
-		  cl3 = 1
-		  cl2 = cl2 + 1
-		  If cl2>200 Then
-			pl1 = pl1 & pl2
-			pl2 = ""
-			cl2 = 1
-		  End If
-		End If
-	  Loop
-	  BinaryToString = pl1 & pl2 & pl3
+	Private Property Get ToBytes(pStr, pEncoding)
+		Dim objStrm : Set objStrm = CreateObject("ADODB.Stream")
+		objStrm.Open
+		objStrm.Type = 2
+		objStrm.CharSet = pEncoding
+		objStrm.WriteText pStr
+		objStrm.Position = 0
+		objStrm.Type = 1
+		ToBytes = objStrm.Read
+		Set objStrm = Nothing
 	End Property
+	
+	Private Function Base64Encode(pStr, pEncoding)
+		Dim objBase64 : Set objBase64 = CreateObject("System.Security.Cryptography.ToBase64Transform")
+		Dim i_size : i_size = objBase64.InputBlockSize
+		Dim o_size : o_size = objBase64.OutputBlockSize
+		Dim n_block
+		
+		Dim objStrm : Set objStrm = CreateObject("ADODB.Stream")
+		objStrm.Open
+		objStrm.Type = 1
+		
+		Dim bytes : bytes = pStr
+		
+		If (LenB(bytes) Mod i_size = 0) Then n_block = LenB(bytes) / i_size Else n_block = LenB(bytes) \ i_size + 1
+		
+		Dim i
+		For i = 0 To n_block - 1
+			Dim b_len : If LenB(bytes) < (i + 1) * i_size Then b_len = LenB(bytes) - i * i_size Else b_len = i_size
+			Dim data : data = objBase64.TransformFinalBlock((bytes), i * i_size, b_len)
+			objStrm.Write data
+		Next
+		
+		objStrm.Position = 0
+		objStrm.Type = 2
+		objStrm.CharSet = pEncoding
+		Base64Encode = objStrm.ReadText
+		Set objStrm = Nothing
+		Set objBase64 = Nothing
+	End Function
 
 	Private Property Get GenerateRequestHash(pRequest)
 		GenerateRequestHash = "[locale=" & Locale & ",conversationId=" & ConversationId
@@ -325,80 +301,50 @@ Class oIyzicoOptions
 	
 End Class
 
-Class izBase64Encoder
+Class oIzyicoRequestFormatter
+
+	Private pRegEx
+	Private Property Get RegEx
+		If (IsEmpty(pRegEx)) Then Set pRegEx = New RegExp
+		Set RegEx = pRegEx
+	End Property
 	
-	Public Property Get FromString(sText)
-		On Error Resume Next
-		Dim oXML, oNode
-		Set oXML = CreateObject("Msxml2.DOMDocument.6.0")
-		Set oNode = oXML.CreateElement("base64")
-		oNode.dataType = "bin.base64"
-		oNode.nodeTypedValue = Stream_StringToBinary(sText)
-		FromString = oNode.text
-		Set oNode = Nothing
-		Set oXML = Nothing
-		If (NOT Utils.CheckError) Then Exit Property
-		Err.Clear
-		FromString = Empty
+	Private Property Get RegexReplace(ByRef pRegEx, ByRef pHaystack, ByRef pNeedle)
+		With RegEx
+			.Pattern = pRegEx
+			.IgnoreCase = True
+			.Global = True
+			.MultiLine = True
+		End With
+		RegexReplace = regEx.Replace(pHaystack, pNeedle)
 	End Property
 
-	Public Property Get ToString(ByVal vCode)
-		On Error Resume Next
-		Dim oXML, oNode
-		Set oXML = CreateObject("Msxml2.DOMDocument.6.0")
-		Set oNode = oXML.CreateElement("base64")
-		oNode.dataType = "bin.base64"
-		oNode.text = vCode
-		ToString = Stream_BinaryToString(oNode.nodeTypedValue)
-		Set oNode = Nothing
-		Set oXML = Nothing
-		If (NOT Utils.CheckError) Then Exit Property
-		Err.Clear
-		ToString = Empty
+	Public Property Get FormatPrice(ByVal pPrice)
+		If (IsEmpty(pPrice)) Then FormatPrice = Empty : Exit Property
+		pPrice = Cstr(pPrice)
+		If (InStr(pPrice, ".") > 0 AND InStr(pPrice, ",") > 0) Then
+			If (InStr(pPrice, ",") > InStr(pPrice, ".")) Then
+				pPrice = Replace(pPrice, ".", "")
+				pPrice = Replace(pPrice, ",", ".")
+			Else
+				pPrice = Replace(pPrice, ",", "")
+			End If
+		Else
+			If (InStr(pPrice, ",") > 0) Then
+				pPrice = Replace(pPrice, ",", ".")
+			End If
+		End If
+		If (NOT IsNumeric(pPrice)) Then FormatPrice = Empty : Exit Property
+		
+		If (InStr(pPrice, ".") = 0) Then 
+			pPrice = pPrice & ".0"
+		Else
+			pPrice = RegexReplace("0+$", pPrice, "")
+			pPrice = RegexReplace("(.*)\.$", pPrice, "$1.0")
+		End If
+		FormatPrice = pPrice
 	End Property
-
-	'Stream_StringToBinary Function
-	'2003 Antonin Foller, http://www.motobit.com
-	'Text - string parameter To convert To binary data
-	Function Stream_StringToBinary(Text)
-		Const adTypeText = 2
-		Const adTypeBinary = 1
-
-		Dim BinaryStream 'As New Stream
-		Set BinaryStream = CreateObject("ADODB.Stream")
-		BinaryStream.Type = adTypeText
-		BinaryStream.CharSet = "ISO-8859-9"
-		BinaryStream.Open
-		BinaryStream.WriteText Text
-		BinaryStream.Position = 0
-		BinaryStream.Type = adTypeBinary
-		BinaryStream.Position = 0
-		Stream_StringToBinary = BinaryStream.Read
-		Set BinaryStream = Nothing
-	End Function
-
-	'Stream_BinaryToString Function
-	'2003 Antonin Foller, http://www.motobit.com
-	'Binary - VT_UI1 | VT_ARRAY data To convert To a string 
-	Private Function Stream_BinaryToString(Binary)
-		Const adTypeText = 2
-		Const adTypeBinary = 1
-		Dim BinaryStream 'As New Stream
-		Set BinaryStream = CreateObject("ADODB.Stream")
-		BinaryStream.Type = adTypeBinary
-		BinaryStream.Open
-		BinaryStream.Write Binary
-		BinaryStream.Position = 0
-		BinaryStream.Type = adTypeText
-		BinaryStream.CharSet = "ISO-8859-9"
-		Stream_BinaryToString = BinaryStream.ReadText
-		Set BinaryStream = Nothing
-	End Function
 
 End Class
 
 %>
-
-<script language="javascript" type="text/javascript" runat="server">
-var Base64={_keyStr:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",encode:function(e){var t="";var n,r,i,s,o,u,a;var f=0;e=Base64._utf8_encode(e);while(f<e.length){n=e.charCodeAt(f++);r=e.charCodeAt(f++);i=e.charCodeAt(f++);s=n>>2;o=(n&3)<<4|r>>4;u=(r&15)<<2|i>>6;a=i&63;if(isNaN(r)){u=a=64}else if(isNaN(i)){a=64}t=t+this._keyStr.charAt(s)+this._keyStr.charAt(o)+this._keyStr.charAt(u)+this._keyStr.charAt(a)}return t},decode:function(e){var t="";var n,r,i;var s,o,u,a;var f=0;e=e.replace(/[^A-Za-z0-9+/=]/g,"");while(f<e.length){s=this._keyStr.indexOf(e.charAt(f++));o=this._keyStr.indexOf(e.charAt(f++));u=this._keyStr.indexOf(e.charAt(f++));a=this._keyStr.indexOf(e.charAt(f++));n=s<<2|o>>4;r=(o&15)<<4|u>>2;i=(u&3)<<6|a;t=t+String.fromCharCode(n);if(u!=64){t=t+String.fromCharCode(r)}if(a!=64){t=t+String.fromCharCode(i)}}t=Base64._utf8_decode(t);return t},_utf8_encode:function(e){e=e.replace(/rn/g,"n");var t="";for(var n=0;n<e.length;n++){var r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r)}else if(r>127&&r<2048){t+=String.fromCharCode(r>>6|192);t+=String.fromCharCode(r&63|128)}else{t+=String.fromCharCode(r>>12|224);t+=String.fromCharCode(r>>6&63|128);t+=String.fromCharCode(r&63|128)}}return t},_utf8_decode:function(e){var t="";var n=0;var r=c1=c2=0;while(n<e.length){r=e.charCodeAt(n);if(r<128){t+=String.fromCharCode(r);n++}else if(r>191&&r<224){c2=e.charCodeAt(n+1);t+=String.fromCharCode((r&31)<<6|c2&63);n+=2}else{c2=e.charCodeAt(n+1);c3=e.charCodeAt(n+2);t+=String.fromCharCode((r&15)<<12|(c2&63)<<6|c3&63);n+=3}}return t}}
-</script>

@@ -146,7 +146,10 @@ Class aspJSON
 			Case Else
 				If (Instr(val, """") = 0) Then
 					If IsNumeric(val) Then
+						Dim oldLCID : oldLCID = Session.LCID
+						Session.LCID = 1033
 						getJSONValue = CDbl(val)
+						Session.LCID = oldLCID
 					Else
 						getJSONValue = val
 					End If

@@ -4,9 +4,11 @@ Class rInstallmentInfo
 
 	Public Path
 	Public Method
+	Private F
 	Public Sub Class_Initialize
 		Path = "/payment/iyzipos/installment"
 		Method = "POST"
+		Set F = New oIzyicoRequestFormatter
 	End Sub 
 
 	Private pBinNumber
@@ -19,20 +21,20 @@ Class rInstallmentInfo
 	
 	Public pPrice
 	Public Property Get Price
-		Price = pPrice
+		Price = F.FormatPrice(pPrice)
 	End Property
 	Public Property Let Price(pVal)
 		pPrice = pVal
 	End Property
 	
 	Public Property Get Hash
-		Hash = "binNumber=" & BinNumber & ",price=" & Price
+		Hash = Iyzico.GenerateHashFromData(Data)
 	End Property
 	
 	Public Property Get Data
 		Set Data = Server.CreateObject("Scripting.Dictionary")
 		Data.Add "binNumber", BinNumber
-		Data.Add "price", Price
+		If (NOT IsEmpty(Price)) Then Data.Add "price", Price
 	End Property
 
 End Class
