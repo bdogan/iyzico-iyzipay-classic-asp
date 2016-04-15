@@ -20,6 +20,26 @@ Class aspJSON
 	    Set aj_RegExp = Nothing
 	End Sub
 
+	Function Utf8Encode(byval UTF8_Data)
+		If Len(UTF8_Data) = 0 Then Exit Function
+		UTF8_Data = Replace(UTF8_Data ,"Ü","Ãœ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ç","Ã‡",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ý","Ä°",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"î","Ã®",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ö","Ã–",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ü","Ã¼",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"þ","ÅŸ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Þ","Å",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ð","ÄŸ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ð","Ä",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ç","Ã§",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ý","Ä±",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ö","Ã¶",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"â","Ã¢",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Â","Ã‚",1,-1,0)
+		Utf8Encode = UTF8_Data
+	End Function
+	
 	Public Sub loadJSON(inputsource)
 		inputsource = aj_MultilineTrim(inputsource)
 		If Len(inputsource) = 0 Then Err.Raise 1, "loadJSON Error", "No data to load."
@@ -192,6 +212,16 @@ Class aspJSON
 					
 					aj_keyvals = objDict.Keys
 					GetDict = GetDict & (GetSubDict(objDict.Item(aj_item)) & Space(JSONoutput_level * 4) & Right(aj_dicttype,1) & aj_InlineIf(aj_item = aj_keyvals(objDict.Count - 1),"" , ",") & Chr(13) & Chr(10))
+				Case "Variant()"
+					Dim pElements(), pElement, Cursor : Cursor = 0 : ReDim pElements(UBOUND(objDict.Item(aj_item)))
+					
+					
+					For Each pElement In objDict.Item(aj_item)
+						pElements(Cursor) = VBCRLF & "{" & GetDict(pElement) & "}"
+						Cursor = Cursor + 1
+					Next
+					
+					GetDict = GetDict & """" & aj_item & """:[" & Join(pElements, ",") & "]" & aj_InlineIf(aj_item = aj_keyvals(objDict.Count - 1),"" , ",") & Chr(13) & Chr(10)
 				Case Else
 					aj_keyvals =  objDict.Keys
 					GetDict = GetDict & (Space(JSONoutput_level * 4) & aj_InlineIf(aj_IsInt(aj_item), "", """" & aj_JSONEncode(aj_item) & """: ") & WriteValue(objDict.Item(aj_item)) & aj_InlineIf(aj_item = aj_keyvals(objDict.Count - 1),"" , ",") & Chr(13) & Chr(10))
@@ -220,14 +250,31 @@ Class aspJSON
 	Private Function aj_JSONEncode(ByVal val)
 		val = Replace(val, "\", "\\")
 		val = Replace(val, """", "\""")
-		'val = Replace(val, "/", "\/")
+		val = Replace(val, "/", "\/")
 		val = Replace(val, Chr(8), "\b")
 		val = Replace(val, Chr(12), "\f")
 		val = Replace(val, Chr(10), "\n")
 		val = Replace(val, Chr(13), "\r")
 		val = Replace(val, Chr(9), "\t")
-		aj_JSONEncode = Trim(val)
+		aj_JSONEncode = Utf8Encode(Trim(val))
 	End Function
+	
+	Public Property Get Utf8Encode(ByRef UTF8_Data)
+		If Len(UTF8_Data) = 0 Then Exit Property
+		UTF8_Data = Replace(UTF8_Data ,"Ü","\u00dc",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ç","\u00c7",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ý","\u0130",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ö","\u00d6",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ü","\u00fc",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"þ","\u015f",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Þ","\u015e",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ð","\u011f",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ð","\u011e",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ç","\u00e7",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ý","\u0131",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ö","\u00f6",1,-1,0)
+		Utf8Encode = UTF8_Data
+	End Property
 
 	Private Function aj_JSONDecode(ByVal val)
 		val = Replace(val, "\""", """")

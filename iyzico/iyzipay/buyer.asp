@@ -1,6 +1,6 @@
 <%
 
-Class rBuyer
+Class mBuyer
 
 	Private pId
 	Public Property Get Id

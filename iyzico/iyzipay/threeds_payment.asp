@@ -1,12 +1,12 @@
 <%
 
-Class rPaymentRequest
+Class rThreeDsPayment
 
 	Public Path
 	Public Method
 	Private F
 	Public Sub Class_Initialize
-		Path = "/payment/iyzipos/auth/ecom"
+		Path = "/payment/iyzipos/initialize3ds/ecom"
 		Method = "POST"
 		Set F = New oIzyicoRequestFormatter
 	End Sub 
@@ -17,6 +17,14 @@ Class rPaymentRequest
 	End Property
 	Public Property Let Price(pVal)
 		pPrice = pVal
+	End Property
+	
+	Private pCallbackUrl
+	Public Property Get CallbackUrl
+		CallbackUrl = pCallbackUrl
+	End Property
+	Public Property Let CallbackUrl(pVal)
+		pCallbackUrl = pVal
 	End Property
     
 	Private pPaidPrice
@@ -29,6 +37,7 @@ Class rPaymentRequest
 	
 	Private pInstallment
 	Public Property Get Installment
+		If (IsEmpty(pInstallment)) Then pInstallment = 1
 		Installment = pInstallment
 	End Property
 	Public Property Let Installment(pVal)
@@ -112,13 +121,32 @@ Class rPaymentRequest
 	End Property
 
 	Public Property Get Hash
-		Hash = "binNumber=" & BinNumber & ",price=" & Price
+		Hash = Iyzico.GenerateHashFromData(Data)
 	End Property
 	
 	Public Property Get Data
 		Set Data = Server.CreateObject("Scripting.Dictionary")
-		Data.Add "binNumber", BinNumber
-		Data.Add "price", Price
+		If (NOT IsEmpty(Price)) Then Data.Add "price", Price
+		If (NOT IsEmpty(PaidPrice)) Then Data.Add "paidPrice", PaidPrice
+		If (NOT IsEmpty(Installment)) Then Data.Add "installment", Installment
+		If (NOT IsEmpty(PaymentChannel)) Then Data.Add "paymentChannel", PaymentChannel
+		If (NOT IsEmpty(BasketId)) Then Data.Add "basketId", BasketId
+		If (NOT IsEmpty(PaymentGroup)) Then Data.Add "paymentGroup", PaymentGroup
+		
+		If (NOT IsEmpty(PaymentCard)) Then Data.Add "paymentCard", PaymentCard.Data
+		If (NOT IsEmpty(Buyer)) Then Data.Add "buyer", Buyer.Data
+		If (NOT IsEmpty(ShippingAddress)) Then Data.Add "shippingAddress", ShippingAddress.Data
+		If (NOT IsEmpty(BillingAddress)) Then Data.Add "billingAddress", BillingAddress.Data	
+		If (NOT IsEmpty(BasketItems)) Then
+			Dim pElements(), Cursor : Cursor = 0 : ReDim pElements(UBOUND(BasketItems))
+			Dim pBasketItem
+			For Each pBasketItem In BasketItems
+				Set pElements(Cursor) = pBasketItem.Data
+				Cursor = Cursor + 1
+			Next
+			Data.Add "basketItems", pElements
+		End If
+		If (NOT IsEmpty(CallbackUrl)) Then Data.Add "callbackUrl", CallbackUrl
 	End Property
 
 End Class

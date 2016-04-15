@@ -1,6 +1,6 @@
 <%
 
-Class rBasketItem
+Class mBasketItem
 	
 	Private F
 	Public Sub Class_Initialize

@@ -1,6 +1,32 @@
 <!--#include file="iyzipay/installment_info.asp" -->
+<!--#include file="iyzipay/payment.asp" -->
+<!--#include file="iyzipay/threeds_payment.asp" -->
+<!--#include file="iyzipay/threeds_payment_auth.asp" -->
+<!--#include file="iyzipay/basket_item.asp" -->
+<!--#include file="iyzipay/address.asp" -->
+<!--#include file="iyzipay/buyer.asp" -->
+<!--#include file="iyzipay/payment_card.asp" -->
 <!--#include file="lib/aspJSON1.17.asp" -->
 <%
+
+' Payment Channel
+Const IyzicoPaymentChannelMobile = "MOBILE"
+Const IyzicoPaymentChannelWeb = "WEB"
+Const IyzicoPaymentChannelMobileWeb = "MOBILE_WEB"
+Const IyzicoPaymentChannelMobileIos = "MOBILE_IOS"
+Const IyzicoPaymentChannelMobileAndroid = "MOBILE_ANDROID"
+Const IyzicoPaymentChannelMobileWindows = "MOBILE_WINDOWS"
+Const IyzicoPaymentChannelMobileTablet = "MOBILE_TABLET"
+Const IyzicoPaymentChannelMobilePhone = "MOBILE_PHONE"
+
+' Payment Group
+Const IyzicoPaymentGroupProduct = "PRODUCT"
+Const IyzicoPaymentGroupListing = "LISTING"
+Const IyzicoPaymentGroupSubscription = "SUBSCRIPTION"
+
+' BasketItemType
+Const IyzicoBasketItemTypePhysical = "PHYSICAL"
+Const IyzicoBasketItemTypeVirtual = "VIRTUAL"
 
 Class oIyzico
 	
@@ -40,7 +66,7 @@ Class oIyzico
 		Dim dKey, Cursor, resultArr, arrObj
 		If (IsNull(pObj)) Then pObj = "" : Exit Property
 		If (IsArray(pObj)) Then
-			Cursor = 0 : ReDim resultArr(ArrayCount(pObj))
+			Cursor = 0 : ReDim resultArr(UBOUND(pObj))
 			For Each arrObj In pObj
 				resultArr(Cursor) = resultArr(Cursor) & VBTAB & "[" & Cursor & "] => " & Replace(DebugStr(arrObj), VBCRLF, VBCRLF & VBTAB)
 				Cursor = Cursor + 1
@@ -89,6 +115,11 @@ Class oIyzico
 		Set CreateRequest = Eval("New r" & pName)
 	End Property
 	
+	' Create iyzipay model
+	Public Property Get CreateModel(pName)
+		Set CreateModel = Eval("New m" & pName)
+	End Property
+	
 	' Create iyzipay options for general request
 	Public Property Get CreateOptions(pApiKey, pSecretKey, pBaseUrl)
 		Set CreateOptions = New oIyzicoOptions
@@ -100,7 +131,20 @@ Class oIyzico
 	Public Property Get GenerateHashFromData(pData)
 		Dim pKey, pHashValues(), Cursor : Cursor = 0 : ReDim pHashValues(pData.Count - 1)
 		For Each pKey In pData.Keys
-			pHashValues(Cursor) = pKey & "=" & pData.Item(pKey)
+			If (IsDictionary(pData.Item(pKey))) Then
+				pHashValues(Cursor) = pKey & "=[" & GenerateHashFromData(pData.Item(pKey)) & "]"
+			ElseIf (IsArray(pData.Item(pKey))) Then
+				Dim pElements : pElements = pData.Item(pKey)
+				Dim pHashElements(), eCursor : eCursor = 0 : ReDim pHashElements(UBOUND(pElements))
+				Dim pHashElement
+				For Each pHashElement In pElements
+					pHashElements(eCursor) = "[" & GenerateHashFromData(pHashElement) & "]"
+					eCursor = eCursor + 1
+				Next
+				pHashValues(Cursor) = pKey & "=[" & Join(pHashElements, ", ") & "]"
+			Else
+				pHashValues(Cursor) = pKey & "=" & Iyzico.Utf8Encode(pData.Item(pKey))
+			End If
 			Cursor = Cursor + 1
 		Next
 		GenerateHashFromData = Join(pHashValues, ",")
@@ -122,11 +166,30 @@ Class oIyzico
 	End Property
 	
 	Private Function base64_sha1(pVal)
-		pr(pVal)
 		Set oCrypt = Server.CreateObject("System.Security.Cryptography.SHA1Managed")
-		base64_sha1 = Base64Encode(oCrypt.ComputeHash_2(ToBytes(pVal, "ascii")), "ascii")
+		base64_sha1 = Base64Encode(oCrypt.ComputeHash_2(ToBytes(pVal, "Windows-1254")), "Windows-1254")
 		Set oCrypt = Nothing
 	End Function
+	
+	Public Property Get Utf8Encode(ByRef UTF8_Data)
+		If Len(UTF8_Data) = 0 Then Exit Property
+		UTF8_Data = Replace(UTF8_Data ,"Ü","Ãœ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ç","Ã‡",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"İ","Ä°",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"î","Ã®",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ö","Ã–",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ü","Ã¼",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ş","ÅŸ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ş","Å",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ğ","ÄŸ",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Ğ","Ä",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ç","Ã§",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ı","Ä±",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"ö","Ã¶",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"â","Ã¢",1,-1,0)
+		UTF8_Data = Replace(UTF8_Data ,"Â","Ã‚",1,-1,0)
+		Utf8Encode = UTF8_Data
+	End Property
 	
 	Private Property Get ToBytes(pStr, pEncoding)
 		Dim objStrm : Set objStrm = CreateObject("ADODB.Stream")
@@ -139,6 +202,32 @@ Class oIyzico
 		ToBytes = objStrm.Read
 		Set objStrm = Nothing
 	End Property
+	
+	Public Property Get Base64Decode(pStr)
+		Dim oXML, oNode
+		Set oXML = CreateObject("Msxml2.DOMDocument.6.0")
+		Set oNode = oXML.CreateElement("base64")
+		oNode.dataType = "bin.base64"
+		oNode.text = pStr
+		Base64Decode = Stream_BinaryToString(oNode.nodeTypedValue)
+		Set oNode = Nothing
+		Set oXML = Nothing
+	End Property
+	
+	Private Function Stream_BinaryToString(Binary)
+		Const adTypeText = 2
+		Const adTypeBinary = 1
+		Dim BinaryStream 'As New Stream
+		Set BinaryStream = CreateObject("ADODB.Stream")
+		BinaryStream.Type = adTypeBinary
+		BinaryStream.Open
+		BinaryStream.Write Binary
+		BinaryStream.Position = 0
+		BinaryStream.Type = adTypeText
+		BinaryStream.CharSet = "Windows-1254"
+		Stream_BinaryToString = BinaryStream.ReadText
+		Set BinaryStream = Nothing
+	End Function
 	
 	Private Function Base64Encode(pStr, pEncoding)
 		Dim objBase64 : Set objBase64 = CreateObject("System.Security.Cryptography.ToBase64Transform")
@@ -190,10 +279,16 @@ Class oIyzico
 		Set CreateResponse = GetResponse(pRequest.Method, pOptions.BaseUrl & pRequest.Path, RequestData(pRequest), RequestHeaders(pRequest))
 	End Property
 	
+	Private pLastRequest
+	Public Property Get LastRequest
+		Set LastRequest = pLastRequest
+	End Property
+	
 	Public Property Get GetResponse(pMethod, pUrl, pData, pHeader)
 		If (IsEmpty(pMethod)) Then pMethod = "GET"
 		If (IsEmpty(pHeader)) Then Set pHeader = Server.CreateObject("Scripting.Dictionary")
-		
+		Set pLastRequest = Server.CreateObject("Scripting.Dictionary")
+
 		Dim pRequestBody : pRequestBody = ""
 		If (pMethod = "POST" OR pMethod = "PUT") Then
 			If (TypeName(pData) = "Dictionary") Then 
@@ -218,8 +313,17 @@ Class oIyzico
 				If (InStr("?", pUrl) > 0) Then pUrl = pUrl & "&" & qs Else pUrl = pUrl & "?" & qs
 			End If
 		End If
+		
 		Dim objXML : Set objXML = Server.CreateObject("Msxml2.ServerXMLHTTP.6.0")
 		objXML.setTimeouts 100000, 100000, 200000, 200000
+		
+		pLastRequest.Add "Method", pMethod
+		pLastRequest.Add "Header", pHeader
+		pLastRequest.Add "Url", pUrl
+		pLastRequest.Add "Data", ""
+		If (TypeName(pData) = "Dictionary") Then Set pLastRequest("Data") = pData
+		pLastRequest.Add "Body", pRequestBody
+		
 		objXML.Open pMethod, pUrl, False
 		If (pHeader.Count > 0) Then
 			Dim pHeaderKey

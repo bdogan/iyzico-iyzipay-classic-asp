@@ -1,6 +1,6 @@
 <%
 
-Class rAddress
+Class mAddress
 
 	Private pContactName
 	Public Property Get ContactName

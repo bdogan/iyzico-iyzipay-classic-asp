@@ -1,6 +1,6 @@
 <%
 
-Class rPaymentCard
+Class mPaymentCard
 	
 	Private pCardHolderName
 	Public Property Get CardHolderName
