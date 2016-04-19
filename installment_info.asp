@@ -1,14 +1,16 @@
 <!--#include file="iyzico/iyzico.asp" -->
 <%
-	Dim pBinNumber, pPrice, InstallmentResponse
+	Dim pBinNumber, pPrice, InstallmentResponse, pApikey, pApiSecret
 	pBinNumber = Request.Form("bin_number")
 	pPrice = Request.Form("price")
+	pApikey = "j62A2FzHv838Yjt7wDddKOmcxMijGBQY"
+	pApiSecret = "81wIl3hHs8zt4wgkIpZDECSAWQDVEiDO"
 	
 	
 	If (NOT IsEmpty(pBinNumber)) Then
 		Set Iyzico = New oIyzico
 		Iyzico.ConversationId = "123456"
-		Set Options = Iyzico.CreateOptions("62A2FzHv838Yjt7wDddKOmcxMijGBQYj", "1wIl3hHs8zt4wgkIpZDECSAWQDVEiDO8", "https://api.iyzipay.com")
+		Set Options = Iyzico.CreateOptions(pApikey, pApiSecret, "https://api.iyzipay.com")
 		
 		Set InstallmentRequest = Iyzico.CreateRequest("InstallmentInfo", Options)
 		
