@@ -19,26 +19,6 @@ Class aspJSON
 		Set data = Nothing
 	    Set aj_RegExp = Nothing
 	End Sub
-
-	Function Utf8Encode(byval UTF8_Data)
-		If Len(UTF8_Data) = 0 Then Exit Function
-		UTF8_Data = Replace(UTF8_Data ,"Ü","Ãœ",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Ç","Ã‡",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Ý","Ä°",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"î","Ã®",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Ö","Ã–",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"ü","Ã¼",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"þ","ÅŸ",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Þ","Å",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"ð","ÄŸ",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Ð","Ä",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"ç","Ã§",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"ý","Ä±",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"ö","Ã¶",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"â","Ã¢",1,-1,0)
-		UTF8_Data = Replace(UTF8_Data ,"Â","Ã‚",1,-1,0)
-		Utf8Encode = UTF8_Data
-	End Function
 	
 	Public Sub loadJSON(inputsource)
 		inputsource = aj_MultilineTrim(inputsource)
