@@ -35,6 +35,15 @@ Class rThreeDsPayment
 		pPaidPrice = pVal
 	End Property
 	
+	Private pCurr
+	Public Property Get Curr
+		If (IsEmpty(pCurr)) Then pCurr = "TRY"
+		Curr = pCurr
+	End Property
+	Public Property Let Curr(pVal)
+		pCurr = pVal
+	End Property
+	
 	Private pInstallment
 	Public Property Get Installment
 		If (IsEmpty(pInstallment)) Then pInstallment = 1
@@ -146,6 +155,7 @@ Class rThreeDsPayment
 			Next
 			Data.Add "basketItems", pElements
 		End If
+		If (NOT IsEmpty(Curr)) Then Data.Add "currency", Curr
 		If (NOT IsEmpty(CallbackUrl)) Then Data.Add "callbackUrl", CallbackUrl
 	End Property
 

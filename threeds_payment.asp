@@ -5,6 +5,8 @@
 	
 	pPrice = Request.Form("price")
 	pPaidPrice = Request.Form("paid_price")
+	pCurr = Request.Form("curr")
+	If (IsEmpty(pCurr)) Then pCurr = "TRY"
 	
 	pCardHolder = Request.Form("card_holder")
 	pCardNumber = Request.Form("card_number")	
@@ -24,6 +26,7 @@
 			
 		ThreeDsPaymentRequest.Price = pPrice
 		ThreeDsPaymentRequest.PaidPrice = pPaidPrice
+		ThreeDsPaymentRequest.Curr = pCurr
 		ThreeDsPaymentRequest.Installment = pInstallment
 		ThreeDsPaymentRequest.BasketId = "B67832"
 		ThreeDsPaymentRequest.PaymentChannel = IyzicoPaymentChannelWeb
@@ -120,6 +123,7 @@
 			<form method="POST">
 				<p><input name="price" class="form-control" placeholder="price" value="<%=pPrice%>" /></p>
 				<p><input name="paid_price" class="form-control" placeholder="paid price" value="<%=pPaidPrice%>" /></p>
+				<p><input name="curr" class="form-control" placeholder="curr" value="<%=pCurr%>" /></p>
 				<p><input name="installment" class="form-control" placeholder="installment" value="<%=pInstallment%>" /></p>
 				<hr size="1" />
 				<p><input name="card_holder" class="form-control" placeholder="card holder" value="<%=pCardHolder%>" /></p>
